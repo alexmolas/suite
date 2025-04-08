@@ -25,8 +25,8 @@ result = tester(obscure_multiply)
 print(result)
 
 # {'reasoning': "The function's docstring states that it should multiply x by y. 
-# However, the implementation returns x + y, which is addition instead of multiplication. 
-# Therefore, the implementation does not correctly fulfill what is described in the docstring.",
+#   However, the implementation returns x + y, which is addition instead of multiplication. 
+#   Therefore, the implementation does not correctly fulfill what is described in the docstring.",
 # 'passed': False}
 ```
 
