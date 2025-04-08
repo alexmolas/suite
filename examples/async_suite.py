@@ -1,6 +1,5 @@
-
 import asyncio
-from suite.suite import async_suite
+from suite import async_suite
 
 tester = async_suite(model_name="openrouter/openai/o3-mini", debug=True)
 
@@ -54,6 +53,7 @@ async def main():
     om_resp = tester(obscure_multiply)  # Await the async call
     m_resp = tester(multiply)  # Await the async call
     await asyncio.gather(om_resp, m_resp)
-    
+
+
 if __name__ == "__main__":
     asyncio.run(main())  # Run the main async function

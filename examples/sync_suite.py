@@ -1,4 +1,4 @@
-from suite.suite import suite
+from suite import suite
 
 tester = suite(model_name="openrouter/openai/o3-mini", debug=True)
 
@@ -47,9 +47,14 @@ def obscure_multiply(x: int, y: int) -> int:
 
     return recursive_multiply(x, y)
 
+
 def main():
     om_resp = tester(obscure_multiply)
     m_resp = tester(multiply)
-    
+
+    print(om_resp)
+    print(m_resp)
+
+
 if __name__ == "__main__":
     main()
