@@ -26,12 +26,22 @@ Read the implementation carefully. Reason step by step and take your time.
 """
 
 
-def format_dependencies(func_info: FunctionInfo) -> str:
+DEFAULT_DEPENDENCY_TEMPLATE = """
+Dependency {index}: {function_name}
+Docstring: {docstring}
+Implementation: {source}
+"""
+
+
+def format_dependencies(
+    func_info: FunctionInfo, dependencies_template: str = DEFAULT_DEPENDENCY_TEMPLATE
+) -> str:
     """
     Format dependency information for inclusion in the prompt.
 
     Args:
         func_info: Function information with dependencies
+        template: Template for formatting dependencies
 
     Returns:
         Formatted dependency context string
@@ -42,14 +52,23 @@ def format_dependencies(func_info: FunctionInfo) -> str:
     context = []
 
     for i, dep in enumerate(func_info.dependencies, 1):
-        context.append(f"\nDependency {i}: {dep.name}")
-        context.append(f"Docstring: {dep.docstring}")
-        context.append(f"Source:\n```python\n{dep.source}\n```")
+        context.append(
+            dependencies_template.format(
+                index=i,
+                function_name=dep.name,
+                docstring=dep.docstring,
+                source=dep.source,
+            )
+        )
 
     return "\n".join(context)
 
 
-def format_prompt(func_info: FunctionInfo, template: str) -> str:
+def format_prompt(
+    func_info: FunctionInfo,
+    prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
+    dependencies_template: str = DEFAULT_DEPENDENCY_TEMPLATE,
+) -> str:
     """
     Format a prompt for the LLM.
 
@@ -60,8 +79,8 @@ def format_prompt(func_info: FunctionInfo, template: str) -> str:
     Returns:
         Formatted prompt
     """
-    dependencies = format_dependencies(func_info)
-    return template.format(
+    dependencies = format_dependencies(func_info, dependencies_template)
+    return prompt_template.format(
         function_name=func_info.name,
         docstring=func_info.docstring,
         source=func_info.source,
@@ -87,17 +106,21 @@ class suite:
         model_name: str,
         max_depth: int = 1,
         prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
+        dependencies_template: str = DEFAULT_DEPENDENCY_TEMPLATE,
         debug=False,
     ):
         self.model_name = model_name
         self.model = llm.get_model(model_name)
         self.max_depth = max_depth
         self.prompt_template = prompt_template
+        self.dependencies_template = dependencies_template
         self.debug = debug
 
     def __call__(self, func: Callable) -> SuiteOutput:
         func_info = build_dependency_tree(func, max_depth=self.max_depth)
-        prompt = format_prompt(func_info, self.prompt_template)
+        prompt = format_prompt(
+            func_info, self.prompt_template, self.dependencies_template
+        )
         if self.debug:
             logger.info(prompt)
         resp = self.model.prompt(prompt=prompt, schema=SuiteOutput).text()
@@ -112,17 +135,21 @@ class async_suite:
         model_name: str,
         max_depth: int = 1,
         prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
+        dependencies_template: str = DEFAULT_DEPENDENCY_TEMPLATE,
         debug=False,
     ):
         self.model_name = model_name
         self.model = llm.get_async_model(model_name)  # Use async model
         self.max_depth = max_depth
         self.prompt_template = prompt_template
+        self.dependencies_template = dependencies_template
         self.debug = debug
 
     async def __call__(self, func: Callable) -> SuiteOutput:
         func_info = build_dependency_tree(func, max_depth=self.max_depth)
-        prompt = format_prompt(func_info, self.prompt_template)
+        prompt = format_prompt(
+            func_info, self.prompt_template, self.dependencies_template
+        )
         if self.debug:
             logger.info(prompt)
         resp = await self.model.prompt(

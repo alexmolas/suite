@@ -20,7 +20,13 @@ class FunctionInfo(BaseModel):
     dependencies: list["FunctionInfo"] = []
 
     @classmethod
-    def from_func(cls, func: Callable, max_depth: int = 2, current_depth: int = 0, visited: set[str] = None):
+    def from_func(
+        cls,
+        func: Callable,
+        max_depth: int = 2,
+        current_depth: int = 0,
+        visited: set[str] = None,
+    ):
         if visited is None:
             visited = set()
 
@@ -50,7 +56,9 @@ class FunctionInfo(BaseModel):
             dep_func = get_function_by_name(call, inspect.getmodule(func))
             if dep_func and callable(dep_func):
                 # Recursively get dependencies
-                dep_info = cls.from_func(dep_func, max_depth, current_depth + 1, visited)
+                dep_info = cls.from_func(
+                    dep_func, max_depth, current_depth + 1, visited
+                )
                 dependencies.append(dep_info)
 
         return cls(
@@ -60,6 +68,7 @@ class FunctionInfo(BaseModel):
             source_file=source_file,
             dependencies=dependencies,
         )
+
 
 class FunctionCallVisitor(ast.NodeVisitor):
     """AST visitor to find function calls within a function."""
