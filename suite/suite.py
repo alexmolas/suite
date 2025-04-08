@@ -7,7 +7,9 @@ from pydantic import BaseModel
 from suite.analyzer import FunctionInfo, build_dependency_tree
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +18,7 @@ You are evaluating whether a function implementation correctly matches its docst
 
 Function name: {function_name}
 Docstring: {docstring}
-Implementation: {implementation}
+Implementation: {source}
 Dependencies: {dependencies}
 
 Does the implementation correctly fulfill what is described in the docstring?
@@ -27,34 +29,34 @@ Read the implementation carefully. Reason step by step and take your time.
 def format_dependencies(func_info: FunctionInfo) -> str:
     """
     Format dependency information for inclusion in the prompt.
-    
+
     Args:
         func_info: Function information with dependencies
-        
+
     Returns:
         Formatted dependency context string
     """
     if not func_info.dependencies:
         return "No dependencies found."
-    
+
     context = []
-    
+
     for i, dep in enumerate(func_info.dependencies, 1):
         context.append(f"\nDependency {i}: {dep.name}")
         context.append(f"Docstring: {dep.docstring}")
-        context.append(f"Implementation:\n```python\n{dep.implementation}\n```")
-    
+        context.append(f"Source:\n```python\n{dep.source}\n```")
+
     return "\n".join(context)
 
 
 def format_prompt(func_info: FunctionInfo, template: str) -> str:
     """
     Format a prompt for the LLM.
-    
+
     Args:
         func_info: Function information
         template: Prompt template
-        
+
     Returns:
         Formatted prompt
     """
@@ -62,13 +64,12 @@ def format_prompt(func_info: FunctionInfo, template: str) -> str:
     return template.format(
         function_name=func_info.name,
         docstring=func_info.docstring,
-        implementation=func_info.source,
-        dependencies=dependencies
+        source=func_info.source,
+        dependencies=dependencies,
     )
 
 
 class SuiteOutput(BaseModel):
-    
     reasoning: str
     passed: bool
 
@@ -76,13 +77,18 @@ class SuiteOutput(BaseModel):
         return self.passed
 
 
-
 def _process_resp(text: str) -> dict:
     return json.loads(text)
 
 
 class suite:
-    def __init__(self, model_name: str, max_depth: int = 1, prompt_template: str = DEFAULT_PROMPT_TEMPLATE, debug=False):
+    def __init__(
+        self,
+        model_name: str,
+        max_depth: int = 1,
+        prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
+        debug=False,
+    ):
         self.model_name = model_name
         self.model = llm.get_model(model_name)
         self.max_depth = max_depth
@@ -101,7 +107,13 @@ class suite:
 
 
 class async_suite:
-    def __init__(self, model_name: str, max_depth: int = 1, prompt_template: str = DEFAULT_PROMPT_TEMPLATE, debug=False):
+    def __init__(
+        self,
+        model_name: str,
+        max_depth: int = 1,
+        prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
+        debug=False,
+    ):
         self.model_name = model_name
         self.model = llm.get_async_model(model_name)  # Use async model
         self.max_depth = max_depth
@@ -113,7 +125,9 @@ class async_suite:
         prompt = format_prompt(func_info, self.prompt_template)
         if self.debug:
             logger.info(prompt)
-        resp = await self.model.prompt(prompt=prompt, schema=SuiteOutput).text()  # Await the async call
+        resp = await self.model.prompt(
+            prompt=prompt, schema=SuiteOutput
+        ).text()  # Await the async call
         if self.debug:
             logger.info(resp)
 

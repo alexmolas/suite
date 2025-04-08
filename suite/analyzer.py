@@ -10,55 +10,6 @@ from typing import Any, Callable
 from pydantic import BaseModel
 
 
-def parse_docstring(docstring: str) -> dict[str, Any]:
-    """Parse a docstring into structured information."""
-    lines = docstring.strip().split("\n")
-
-    # Initialize the result dictionary
-    result: dict[str, Any] = {
-        "short_description": "",
-        "long_description": "",
-        "params": [],
-        "returns": {
-            "type": None,
-            "description": None,
-        },
-    }
-
-    # Extract short description
-    result["short_description"] = lines[0].strip()
-
-    # Extract long description (if any)
-    if len(lines) > 1:
-        result["long_description"] = "\n".join(
-            line.strip() for line in lines[1:] if line.strip()
-        )
-
-    # Simple parameter and return type extraction (assuming a specific format)
-    for line in lines:
-        line = line.strip()
-        if line.startswith(":param"):
-            parts = line.split(":")
-            param_name = parts[1].strip()
-            param_type = parts[2].strip() if len(parts) > 2 else "unknown"
-            param_description = parts[3].strip() if len(parts) > 3 else ""
-            result["params"].append(
-                {
-                    "name": param_name,
-                    "type": param_type,
-                    "description": param_description,
-                }
-            )
-        elif line.startswith(":returns:"):
-            parts = line.split(":")
-            result["returns"]["type"] = parts[1].strip() if len(parts) > 1 else None
-            result["returns"]["description"] = (
-                parts[2].strip() if len(parts) > 2 else None
-            )
-
-    return result
-
-
 class FunctionInfo(BaseModel):
     """Information about a function extracted for semantic testing."""
 
@@ -66,23 +17,49 @@ class FunctionInfo(BaseModel):
     docstring: str | None
     source: str | None
     source_file: str | None
-    line_number: int | None
     dependencies: list["FunctionInfo"] = []
 
-    def __str__(self) -> str:
-        return f"{self.name} ({self.source_file}:{self.line_number})"
+    @classmethod
+    def from_func(cls, func: Callable, max_depth: int = 2, current_depth: int = 0, visited: set[str] = None):
+        if visited is None:
+            visited = set()
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to a dictionary representation."""
-        return {
-            "name": self.name,
-            "docstring": self.docstring,
-            "source": self.source,
-            "source_file": self.source_file,
-            "line_number": self.line_number,
-            "dependencies": [dep.to_dict() for dep in self.dependencies],
-        }
+        name = func.__name__
+        docstring = extract_docstring(func)
+        source = extract_source(func)
+        source_file = extract_source_file(func)
 
+        # Stop recursion if we've reached the maximum depth
+        if current_depth >= max_depth or name in visited:
+            return cls(
+                name=name,
+                docstring=docstring,
+                source=source,
+                source_file=source_file,
+                dependencies=[],
+            )
+
+        # Mark this function as visited
+        visited.add(name)
+
+        # Find function calls to determine dependencies
+        function_calls = find_function_calls(func)
+        dependencies = []
+
+        for call in function_calls:
+            dep_func = get_function_by_name(call, inspect.getmodule(func))
+            if dep_func and callable(dep_func):
+                # Recursively get dependencies
+                dep_info = cls.from_func(dep_func, max_depth, current_depth + 1, visited)
+                dependencies.append(dep_info)
+
+        return cls(
+            name=name,
+            docstring=docstring,
+            source=source,
+            source_file=source_file,
+            dependencies=dependencies,
+        )
 
 class FunctionCallVisitor(ast.NodeVisitor):
     """AST visitor to find function calls within a function."""
@@ -109,14 +86,13 @@ def extract_docstring(func: Callable) -> str | None:
     try:
         return inspect.getdoc(func)
     except TypeError:
-        return ""
+        return None
 
 
 def extract_source(func: Callable) -> str | None:
     try:
         return inspect.getsource(func)
     except TypeError:
-        # For methods implemented in C we can't get its source
         return None
 
 
@@ -125,30 +101,6 @@ def extract_source_file(func: Callable) -> str | None:
         return inspect.getfile(func)
     except TypeError:
         return None
-
-
-def extract_line_number(func: Callable) -> int | None:
-    try:
-        return inspect.getsourcelines(func)[1]
-    except TypeError:
-        return None
-
-
-def extract_function_info(func: Callable) -> FunctionInfo:
-    """Extract information about a function."""
-    name = func.__name__
-    docstring = extract_docstring(func)
-    source = extract_source(func)
-    source_file = extract_source_file(func)
-    line_number = extract_line_number(func)
-
-    return FunctionInfo(
-        name=name,
-        docstring=docstring,
-        source=source,
-        source_file=source_file,
-        line_number=line_number,
-    )
 
 
 def find_function_calls(func: Callable) -> set[str]:
@@ -222,7 +174,7 @@ def build_dependency_tree(
     if visited is None:
         visited = set()
 
-    func_info = extract_function_info(func)
+    func_info = FunctionInfo.from_func(func)
     func_key = f"{func_info.source_file}:{func_info.name}"
 
     # Avoid circular dependencies
