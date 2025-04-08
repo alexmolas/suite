@@ -2,12 +2,12 @@
 
 ## What's semantic unit testing?
 
-Semantic unit testing is a testing approach that evaluates whether a function's implementation aligns with its documented behavior, as described in its docstring. It focuses on analyzing the relationships between functions and their dependencies to ensure correctness and maintainability.
+Semantic unit testing is a testing approach that evaluates whether a function's implementation aligns with its documented behavior. The code is analyzed using LLMs to assess whether the implementation matches the expected behavior described in the docstring.
 
-Here's a short example of how to use the library
+Here's an example of how to use it
+
 
 ```python
-
 from suite import suite
 
 tester = suite(model_name="openai/o3-mini")
