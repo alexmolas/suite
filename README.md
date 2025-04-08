@@ -42,7 +42,7 @@ In this example, the implementation of `multiply` contains an error (it uses add
 
 ## How?
 
-This library uses llm package by Simon Willison. When testing a method, it's source code, docstring, and the dependencies information (any other method used by the code under testing) are retrieved and passed to an LLM for evaluation. Then, the LLM decides if the evaluation is correct or not.
+This library uses [llm](https://llm.datasette.io/en/stable/) package by [Simon Willison](https://simonwillison.net/). When testing a method, its source code, docstring, and the dependencies information (any other method used by the code under testing) are retrieved and passed to an LLM for evaluation. Then, the LLM decides if the evaluation is correct or not.
 
 Since we're using llm library we can use any supported model. From my experience, reasoning models that support structured outputs are the ones that work the best (eg: `o3-mini`). 
 
