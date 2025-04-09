@@ -25,7 +25,7 @@ class FunctionInfo(BaseModel):
         func: Callable,
         max_depth: int = 2,
         current_depth: int = 0,
-        visited: set[str] = None,
+        visited: set[str] | None = None,
     ):
         if visited is None:
             visited = set()
