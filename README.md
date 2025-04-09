@@ -51,6 +51,8 @@ Since we're using llm library we can use any supported model. From my experience
 
 To use the `suite` module, you can create an instance of the `suite` or `async_suite` class, depending on your needs. You will then pass the function you want to test, and `suite` will evaluate its implementation against its docstring, providing feedback on any discrepancies.
 
+You have a couple of examples in the `examples` folder.
+
 The intended usage of this package is for testing, so you could do something like
 
 
