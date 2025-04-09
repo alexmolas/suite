@@ -107,6 +107,8 @@ def _process_resp(text: str) -> dict:
 
 
 class suite:
+    """A class that evaluates a function using semantic testing suite using an LLM model."""
+
     def __init__(
         self,
         model_name: str,
@@ -125,19 +127,31 @@ class suite:
         self.debug = debug
 
     def __call__(self, func: Callable) -> SuiteOutput:
+        """Evaluate the function against its docstring using the LLM model.
+
+        Args:
+            func (Callable): The function to evaluate.
+
+        Returns:
+            SuiteOutput: The result of the evaluation, including reasoning and pass/fail status.
+        """
         func_info = build_dependency_tree(func, max_depth=self.max_depth)
         prompt = format_prompt(
             func_info, self.prompt_template, self.dependencies_template
         )
         if self.debug:
             logger.info(prompt)
-        resp = self.model.prompt(prompt=prompt, system=self.system_prompt, schema=SuiteOutput).text()
+        resp = self.model.prompt(
+            prompt=prompt, system=self.system_prompt, schema=SuiteOutput
+        ).text()
         if self.debug:
             logger.info(resp)
         return SuiteOutput(**_process_resp(resp))
 
 
 class async_suite:
+    """An class that asynchronously evaluates a function using semantic testing suite using an LLM model."""
+
     def __init__(
         self,
         model_name: str,
@@ -156,6 +170,16 @@ class async_suite:
         self.debug = debug
 
     async def __call__(self, func: Callable) -> SuiteOutput:
+        """
+        Evaluate the function against its docstring asynchronously using the LLM model.
+
+        Args:
+            func (Callable): The function to evaluate.
+
+        Returns:
+            SuiteOutput: The result of the evaluation, including reasoning and pass/fail status.
+        """
+
         func_info = build_dependency_tree(func, max_depth=self.max_depth)
         prompt = format_prompt(
             func_info, self.prompt_template, self.dependencies_template
