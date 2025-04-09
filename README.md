@@ -21,7 +21,7 @@ def multiply(x: int, y: int):
     """
     return x + y
 
-result = tester(obscure_multiply)
+result = tester(multiply)
 print(result)
 
 # {'reasoning': "The function's docstring states that it should multiply x by y. 
