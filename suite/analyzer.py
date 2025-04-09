@@ -10,6 +10,16 @@ from typing import Any, Callable
 from pydantic import BaseModel
 
 
+def get_callable_name(func: Callable) -> str:
+    if inspect.isclass(func):
+        return func.__name__
+    elif inspect.isfunction(func):
+        return func.__name__
+    elif isinstance(func, object):
+        return func.__class__.__name__
+    raise ValueError(f"Couldn't extract the name of the object {func}")
+
+
 class FunctionInfo(BaseModel):
     """Information about a function extracted for semantic testing."""
 
@@ -29,8 +39,7 @@ class FunctionInfo(BaseModel):
     ):
         if visited is None:
             visited = set()
-
-        name = func.__name__
+        name = get_callable_name(func)
         docstring = extract_docstring(func)
         source = extract_source(func)
         source_file = extract_source_file(func)
@@ -94,14 +103,14 @@ class FunctionCallVisitor(ast.NodeVisitor):
 def extract_docstring(func: Callable) -> str | None:
     try:
         return inspect.getdoc(func)
-    except TypeError:
+    except TypeError or OSError:
         return None
 
 
 def extract_source(func: Callable) -> str | None:
     try:
         return inspect.getsource(func)
-    except TypeError:
+    except:
         return None
 
 
