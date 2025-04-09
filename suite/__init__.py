@@ -13,6 +13,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_SYSTEM_PROMPT = """
+You are an AI assistant designed to evaluate the correctness of function implementations against their docstrings. 
+Your task is to analyze the provided function, its docstring, and any dependencies to determine if the implementation meets the described behavior. 
+Please provide a detailed reasoning for your evaluation.
+"""
+
 DEFAULT_PROMPT_TEMPLATE = """
 You are evaluating whether a function implementation correctly matches its docstring.
 
@@ -105,6 +111,7 @@ class suite:
         self,
         model_name: str,
         max_depth: int = 1,
+        system_prompt: str = DEFAULT_SYSTEM_PROMPT,
         prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
         dependencies_template: str = DEFAULT_DEPENDENCY_TEMPLATE,
         debug=False,
@@ -112,6 +119,7 @@ class suite:
         self.model_name = model_name
         self.model = llm.get_model(model_name)
         self.max_depth = max_depth
+        self.system_prompt = system_prompt
         self.prompt_template = prompt_template
         self.dependencies_template = dependencies_template
         self.debug = debug
@@ -123,7 +131,7 @@ class suite:
         )
         if self.debug:
             logger.info(prompt)
-        resp = self.model.prompt(prompt=prompt, schema=SuiteOutput).text()
+        resp = self.model.prompt(prompt=prompt, system=self.system_prompt, schema=SuiteOutput).text()
         if self.debug:
             logger.info(resp)
         return SuiteOutput(**_process_resp(resp))
@@ -134,6 +142,7 @@ class async_suite:
         self,
         model_name: str,
         max_depth: int = 1,
+        system_prompt: str = DEFAULT_SYSTEM_PROMPT,
         prompt_template: str = DEFAULT_PROMPT_TEMPLATE,
         dependencies_template: str = DEFAULT_DEPENDENCY_TEMPLATE,
         debug=False,
@@ -141,6 +150,7 @@ class async_suite:
         self.model_name = model_name
         self.model = llm.get_async_model(model_name)  # Use async model
         self.max_depth = max_depth
+        self.system_prompt = system_prompt
         self.prompt_template = prompt_template
         self.dependencies_template = dependencies_template
         self.debug = debug
@@ -153,7 +163,7 @@ class async_suite:
         if self.debug:
             logger.info(prompt)
         resp = await self.model.prompt(
-            prompt=prompt, schema=SuiteOutput
+            prompt=prompt, system=self.system_prompt, schema=SuiteOutput
         ).text()  # Await the async call
         if self.debug:
             logger.info(resp)
