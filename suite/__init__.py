@@ -57,15 +57,26 @@ def format_dependencies(
 
     context = []
 
-    for i, dep in enumerate(func_info.dependencies, 1):
-        context.append(
-            dependencies_template.format(
-                index=i,
-                function_name=dep.name,
-                docstring=dep.docstring,
-                source=dep.source,
-            )
+    def format_dep(dep: FunctionInfo, index: str) -> str:
+        """Recursively format a dependency and its dependencies."""
+        dep_context = dependencies_template.format(
+            index=index,
+            function_name=dep.name,
+            docstring=dep.docstring,
+            source=dep.source,
         )
+        # Format nested dependencies
+        if dep.dependencies:
+            nested_context = []
+            for i, nested_dep in enumerate(dep.dependencies, 1):
+                nested_index = f"{index}.{i}"  # Create hierarchical index
+                nested_context.append(format_dep(nested_dep, nested_index))
+            dep_context += "\n" + "\n".join(nested_context)
+        return dep_context
+
+    for i, dep in enumerate(func_info.dependencies, 1):
+        index = str(i)  # Top-level index
+        context.append(format_dep(dep, index))
 
     return "\n".join(context)
 
