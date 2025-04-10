@@ -4,7 +4,7 @@ from typing import Callable
 import llm
 from pydantic import BaseModel
 
-from suite.analyzer import FunctionInfo, build_dependency_tree
+from suite.analyzer import FunctionInfo
 
 
 logging.basicConfig(
@@ -135,7 +135,7 @@ class suite:
         Returns:
             SuiteOutput: The result of the evaluation, including reasoning and pass/fail status.
         """
-        func_info = build_dependency_tree(func, max_depth=self.max_depth)
+        func_info = FunctionInfo.from_func(func, max_depth=self.max_depth)
         prompt = format_prompt(
             func_info, self.prompt_template, self.dependencies_template
         )
@@ -180,7 +180,7 @@ class async_suite:
             SuiteOutput: The result of the evaluation, including reasoning and pass/fail status.
         """
 
-        func_info = build_dependency_tree(func, max_depth=self.max_depth)
+        func_info = FunctionInfo.from_func(func, max_depth=self.max_depth)
         prompt = format_prompt(
             func_info, self.prompt_template, self.dependencies_template
         )

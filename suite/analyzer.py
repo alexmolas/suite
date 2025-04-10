@@ -21,7 +21,31 @@ def get_callable_name(func: Callable) -> str:
 
 
 class FunctionInfo(BaseModel):
-    """Information about a function extracted for semantic testing."""
+    """
+    Represents metadata and dependency information about a Python function.
+
+    This class is used to extract and store semantic details about a callable,
+    including its name, docstring, source code, source file location, and any
+    other functions it depends on (via static analysis of function calls).
+
+    Attributes:
+        name (str): The name of the function.
+        docstring (str | None): The docstring of the function, if available.
+        source (str | None): The full source code of the function, if retrievable.
+        source_file (str | None): The file path where the function is defined.
+        dependencies (list[FunctionInfo]): A list of `FunctionInfo` objects representing
+            other functions called by this function (dependencies), determined statically.
+
+    Class Methods:
+        from_func(func, max_depth=2, current_depth=0, visited=None, skip_implementation=False):
+            Constructs a `FunctionInfo` object from a Python callable, with optional
+            recursive analysis of its dependencies.
+
+    Example:
+        >>> def foo(): pass
+        >>> FunctionInfo.from_func(foo)
+        FunctionInfo(name='foo', docstring=None, ...)
+    """
 
     name: str
     docstring: str | None
@@ -36,7 +60,34 @@ class FunctionInfo(BaseModel):
         max_depth: int = 2,
         current_depth: int = 0,
         visited: set[str] | None = None,
-    ):
+    ) -> "FunctionInfo":
+        """
+        Create a `FunctionInfo` instance from a Python function, with optional
+        recursive analysis of its function-call dependencies.
+
+        This method uses introspection and AST analysis to extract metadata about
+        the given function and any other functions it calls (dependencies), up to a
+        specified recursion depth.
+
+        Args:
+            func (Callable): The function to analyze.
+            max_depth (int, optional): Maximum depth of dependency analysis. Defaults to 2.
+            current_depth (int, optional): Internal parameter used for tracking the
+                current recursion depth. Defaults to 0.
+            visited (set[str] | None, optional): Set of function names already visited to
+                avoid circular dependencies. Defaults to None.
+
+        Returns:
+            FunctionInfo: An object containing metadata about the function and its dependencies.
+
+        Raises:
+            ValueError: If the function name cannot be determined.
+
+        Example:
+            >>> def foo(): pass
+            >>> FunctionInfo.from_func(foo)
+            FunctionInfo(name='foo', docstring=None, ...)
+        """
         if visited is None:
             visited = set()
         name = get_callable_name(func)
@@ -169,59 +220,3 @@ def get_function_by_name(name: str, module: object) -> Any | None:
             return value
 
     return None
-
-
-def build_dependency_tree(
-    func: Callable,
-    max_depth: int = 2,
-    current_depth: int = 0,
-    visited: set[str] | None = None,
-) -> FunctionInfo:
-    """
-    Build a dependency tree for a function.
-
-    Args:
-        func: The function to analyze
-        max_depth: Maximum depth for dependency analysis
-        current_depth: Current depth in the recursion
-        visited: Set of already visited function names
-
-    Returns:
-        FunctionInfo object with dependencies
-    """
-    if visited is None:
-        visited = set()
-
-    func_info = FunctionInfo.from_func(func)
-    func_key = f"{func_info.source_file}:{func_info.name}"
-
-    # Avoid circular dependencies
-    if func_key in visited:
-        return func_info
-
-    visited.add(func_key)
-
-    # Stop recursion if we've reached the maximum depth
-    if current_depth >= max_depth:
-        return func_info
-
-    # Find function calls
-    function_calls = find_function_calls(func)
-
-    # Get the module of the function
-    module = inspect.getmodule(func)
-
-    # Recursively analyze dependencies
-    for call_name in function_calls:
-        dep_func = get_function_by_name(call_name, module)
-        if dep_func and callable(dep_func):
-            try:
-                dep_info = build_dependency_tree(
-                    dep_func, max_depth, current_depth + 1, visited
-                )
-                func_info.dependencies.append(dep_info)
-            except (OSError, TypeError):
-                # Skip dependencies that can't be analyzed
-                pass
-
-    return func_info
